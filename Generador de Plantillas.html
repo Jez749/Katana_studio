@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>KATANA TURBOS — Generador</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--red:#D42020;--red-dk:#A51616;--blk:#080808;--c1:#141414;--c2:#1C1C1C;--br:#252525;--br2:#2E2E2E;--muted:#666;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Barlow',sans-serif;background:var(--blk);color:#fff;min-height:100vh;max-width:480px;margin:0 auto;}
+    .hdr{background:var(--blk);border-bottom:2px solid var(--red);padding:0 18px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+    .hdr img{height:36px;}
+    .hdr-badge{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:rgba(212,32,32,.12);border:1px solid var(--red);color:var(--red);padding:4px 10px;}
+    .sec{padding:18px 18px 14px;border-bottom:1px solid var(--br);}
+    .sec-lbl{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+    .upzone{background:var(--c1);border:2px dashed var(--br2);border-radius:6px;padding:36px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;}
+    .upzone.drag{border-color:var(--red);background:rgba(212,32,32,.05);}
+    .upzone.proc{cursor:default;opacity:.75;}
+    .up-ico{width:52px;height:52px;background:var(--c2);border:1px solid var(--br2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;border-radius:4px;}
+    .up-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;text-transform:uppercase;margin-bottom:4px;}
+    .up-sub{font-size:13px;color:var(--muted);}
+    .photo-grid{display:flex;gap:8px;flex-wrap:wrap;}
+    .ph-thumb{width:80px;height:80px;position:relative;border:2px solid var(--br);border-radius:4px;overflow:hidden;background:#ddd;flex-shrink:0;}
+    .ph-thumb img{width:100%;height:100%;object-fit:contain;display:block;background:#e8e8e8;}
+    .rm-btn{position:absolute;top:3px;right:3px;width:22px;height:22px;background:rgba(0,0,0,.8);color:#fff;border:none;border-radius:50%;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+    .ph-num{position:absolute;bottom:3px;left:4px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;background:rgba(0,0,0,.65);color:rgba(255,255,255,.9);padding:1px 5px;border-radius:2px;}
+    .ph-ok{position:absolute;top:3px;left:4px;font-size:10px;background:rgba(20,100,40,.85);color:#6effa0;padding:1px 5px;border-radius:2px;font-family:'Barlow Condensed',sans-serif;font-weight:700;}
+    .add-more{width:80px;height:80px;border:2px dashed var(--br2);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:5px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;text-align:center;transition:border-color .2s,color .2s;flex-shrink:0;}
+    .add-more:active{border-color:var(--red);color:var(--red);}
+    .tpl-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+    .tpl-row::-webkit-scrollbar{display:none;}
+    .tpl-card{flex-shrink:0;width:120px;border:2px solid var(--br);border-radius:6px;overflow:hidden;cursor:pointer;transition:border-color .2s;}
+    .tpl-card.on{border-color:var(--red);}
+    .tpl-card canvas{width:100%;height:90px;display:block;}
+    .tpl-name{background:var(--c2);padding:7px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+    .tpl-card.on .tpl-name{color:#fff;}
+    .badge-row{display:flex;flex-wrap:wrap;gap:8px;}
+    .chip{padding:8px 15px;border:1px solid var(--br);background:var(--c1);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;color:var(--muted);border-radius:3px;transition:all .15s;user-select:none;}
+    .chip.on{background:var(--red);border-color:var(--red);color:#fff;}
+    .chip.none.on{background:var(--c2);border-color:var(--br2);color:#fff;}
+    .chip.custom.on{background:#2c1a7a;border-color:#4a2aaa;color:#c0a0ff;}
+    .custom-wrap{margin-top:10px;}
+    .fld-wrap{margin-bottom:10px;}
+    .fld-lbl{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    input.inp{width:100%;background:var(--c1);border:1px solid var(--br);border-radius:4px;color:#fff;font-family:'Barlow',sans-serif;font-size:16px;padding:12px 14px;outline:none;transition:border-color .2s;-webkit-appearance:none;}
+    input.inp:focus{border-color:var(--red);}
+    input.inp::placeholder{color:#3a3a3a;}
+    .pv-wrap{position:relative;background:#111;border:1px solid var(--br);border-radius:6px;overflow:hidden;aspect-ratio:9/16;max-width:300px;margin:0 auto;}
+    .pv-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+    .pv-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:1px;text-transform:uppercase;}
+    .spin-ov{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;}
+    .spin{width:38px;height:38px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;}
+    .spin.sm{width:20px;height:20px;border-width:2px;}
+    .spin-lbl{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:rgba(255,255,255,.6);letter-spacing:1px;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .act-wrap{padding:16px 18px 40px;display:flex;flex-direction:column;gap:10px;}
+    .btn-dl,.btn-wa,.btn-anim,.btn-animdl{display:flex;align-items:center;justify-content:center;gap:10px;padding:15px;border:none;border-radius:4px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:17px;letter-spacing:2px;text-transform:uppercase;text-decoration:none;color:#fff;width:100%;}
+    .btn-dl{background:var(--red);}
+    .btn-anim{background:linear-gradient(135deg,#1a0a40,#5a1aaa);font-size:15px;}
+    .btn-anim:hover{opacity:.85;}
+    .btn-animdl{background:#1a3a60;font-size:15px;}
+    .act-divider{height:1px;background:var(--br);margin:4px 0;}
+    .btn-dl.off,.btn-wa.off,.btn-anim.off{opacity:.28;pointer-events:none;}
+    input[type=file]{display:none;}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+  try {
+    const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.min.js');
+    window.Mp4Muxer = { Muxer, ArrayBufferTarget };
+  } catch(e) { console.warn('mp4-muxer no disponible:', e); }
+</script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel">
+  const { useState, useEffect, useRef } = React;
+
+  // ── Background removal (3 pasadas) ────────────────────────
+  function removeBackground(file){
+    return new Promise((resolve,reject)=>{
+      const img=new Image(),url=URL.createObjectURL(file);
+      img.onload=()=>{
+        try{
+          URL.revokeObjectURL(url);
+          const W=img.width,H=img.height,cv=document.createElement('canvas');
+          cv.width=W;cv.height=H;
+          const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
+          const imd=ctx.getImageData(0,0,W,H),d=imd.data;
+
+          // ── Detectar color de fondo (mediana de bordes) ──
+          const smp=[],step=Math.max(2,Math.floor(Math.min(W,H)/80));
+          const addS=(x,y)=>{const i=(y*W+x)*4;smp.push([d[i],d[i+1],d[i+2]]);};
+          for(let x=0;x<W;x+=step){addS(x,0);addS(x,H-1);}
+          for(let y=step;y<H-step;y+=step){addS(0,y);addS(W-1,y);}
+          const rs=smp.map(s=>s[0]).sort((a,b)=>a-b);
+          const gs=smp.map(s=>s[1]).sort((a,b)=>a-b);
+          const bs=smp.map(s=>s[2]).sort((a,b)=>a-b);
+          const m=Math.floor(smp.length/2);
+          const bg=[rs[m],gs[m],bs[m]];
+          const lum=(bg[0]+bg[1]+bg[2])/3;
+          const isWhiteBg = lum > 190;
+
+          const cdist=(x,y)=>{const i=(y*W+x)*4;const dr=d[i]-bg[0],dg=d[i+1]-bg[1],db=d[i+2]-bg[2];return Math.sqrt(dr*dr+dg*dg+db*db);};
+
+          // ── PASADA 1: BFS flood-fill desde bordes ──
+          const thr = isWhiteBg ? 72 : lum<40 ? 38 : 55;
+          const mask=new Uint8Array(W*H);
+          const sx=new Int32Array(W*H),sy=new Int32Array(W*H);
+          let sp=0,head=0;
+          const push=(x,y)=>{if(x<0||x>=W||y<0||y>=H)return;const i=y*W+x;if(mask[i])return;if(cdist(x,y)<thr){mask[i]=1;sx[sp]=x;sy[sp]=y;sp++;}};
+          for(let x=0;x<W;x++){push(x,0);push(x,H-1);}
+          for(let y=1;y<H-1;y++){push(0,y);push(W-1,y);}
+          while(head<sp){const cx=sx[head],cy=sy[head];head++;push(cx-1,cy);push(cx+1,cy);push(cx,cy-1);push(cx,cy+1);}
+
+          // ── PASADA 2: Para fondos blancos — luminance keying agresivo ──
+          // Cualquier píxel casi-blanco adyacente (radio 3) a uno ya transparente → eliminar
+          if(isWhiteBg){
+            let changed=true;
+            let pass=0;
+            while(changed&&pass<6){
+              changed=false;pass++;
+              for(let y=1;y<H-1;y++){for(let x=1;x<W-1;x++){
+                const i=y*W+x;if(mask[i])continue;
+                // Vecino transparente?
+                const nearBg=mask[i-1]||mask[i+1]||mask[i-W]||mask[i+W]||
+                             (x>1&&mask[i-2])||(x<W-2&&mask[i+2])||
+                             (y>1&&mask[i-W-W])||(y<H-2&&mask[i+W+W]);
+                if(!nearBg)continue;
+                const pi=i*4;
+                const r=d[pi],g=d[pi+1],b=d[pi+2];
+                const brightness=(r+g+b)/3;
+                const saturation=Math.max(r,g,b)-Math.min(r,g,b);
+                // Pixel casi-blanco o muy parecido al fondo → eliminar
+                if(brightness>200&&saturation<40){mask[i]=1;changed=true;}
+                else if(cdist(x,y)<thr*0.7){mask[i]=1;changed=true;}
+              }}
+            }
+          }
+
+          // ── PASADA 2.5: Eliminar blanco AISLADO (huecos internos) ──
+          // El flood-fill solo borra fondo conectado al borde. Los huecos
+          // blancos rodeados por el producto quedan; aquí los detectamos
+          // con un keying global de blanco casi-puro.
+          if(isWhiteBg){
+            for(let i=0;i<W*H;i++){
+              if(mask[i])continue;
+              const pi=i*4;
+              const r=d[pi],g=d[pi+1],b=d[pi+2];
+              const brightness=(r+g+b)/3;
+              const saturation=Math.max(r,g,b)-Math.min(r,g,b);
+              // Blanco casi-puro y sin color → es fondo aislado
+              if(brightness>225&&saturation<24){mask[i]=1;}
+            }
+            // Expandir 2px alrededor de los huecos recién marcados para
+            // limpiar el halo gris-claro del borde del hueco
+            for(let rep=0;rep<2;rep++){
+              const add=[];
+              for(let y=1;y<H-1;y++){for(let x=1;x<W-1;x++){
+                const i=y*W+x;if(mask[i])continue;
+                const nearBg=mask[i-1]||mask[i+1]||mask[i-W]||mask[i+W];
+                if(!nearBg)continue;
+                const pi=i*4,brightness=(d[pi]+d[pi+1]+d[pi+2])/3,saturation=Math.max(d[pi],d[pi+1],d[pi+2])-Math.min(d[pi],d[pi+1],d[pi+2]);
+                if(brightness>205&&saturation<34)add.push(i);
+              }}
+              for(const i of add)mask[i]=1;
+            }
+          }
+
+          // ── PASADA 3: Aplicar alpha con feather suave (radio 3) + spill ──
+          // Precalcular mapa de distancia al borde (simplificado)
+          for(let y=0;y<H;y++){for(let x=0;x<W;x++){
+            const i=y*W+x;
+            if(mask[i]){d[i*4+3]=0;continue;}
+            // Contar vecinos transparentes en radio 3
+            let near=0,total=0;
+            for(let dy=-3;dy<=3;dy++){for(let dx=-3;dx<=3;dx++){
+              const nx=x+dx,ny=y+dy;
+              if(nx<0||nx>=W||ny<0||ny>=H)continue;
+              total++;if(mask[ny*W+nx])near++;
+            }}
+            if(near===0)continue;
+            const pi=i*4;
+            const frac=near/total;
+            // Spill suppression: píxeles claros cerca del borde pierden alpha
+            const brightness=(d[pi]+d[pi+1]+d[pi+2])/3;
+            const spillR=isWhiteBg?Math.max(0,(brightness-150)/105):0;
+            const newAlpha=d[pi+3]*(1-frac*0.85)*(1-spillR*0.9);
+            d[pi+3]=Math.max(0,Math.round(newAlpha));
+          }}
+
+          ctx.putImageData(imd,0,0);
+
+          // ── PASADA 4: Recortar el espacio transparente (bounding box) ──
+          // Así el producto llena la zona en vez de quedar chico/descentrado.
+          let minX=W,minY=H,maxX=0,maxY=0,found=false;
+          for(let y=0;y<H;y++){for(let x=0;x<W;x++){
+            if(d[(y*W+x)*4+3]>16){found=true;if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;}
+          }}
+          let outCv=cv;
+          if(found&&(maxX-minX)>4&&(maxY-minY)>4){
+            const pad=Math.round(Math.max(maxX-minX,maxY-minY)*0.02);
+            const cx0=Math.max(0,minX-pad),cy0=Math.max(0,minY-pad);
+            const cw=Math.min(W,maxX+pad)-cx0,ch=Math.min(H,maxY+pad)-cy0;
+            outCv=document.createElement('canvas');outCv.width=cw;outCv.height=ch;
+            outCv.getContext('2d').drawImage(cv,cx0,cy0,cw,ch,0,0,cw,ch);
+          }
+
+          outCv.toBlob(blob=>{
+            const out=new Image(),u=URL.createObjectURL(blob);
+            out.onload=()=>{URL.revokeObjectURL(u);resolve(out);};
+            out.onerror=reject;out.src=u;
+          },'image/png');
+        }catch(e){reject(e);}
+      };img.onerror=reject;img.src=url;
+    });
+  }
+
+  // ── Canvas drawing ──────────────────────────────────────────
+  function fitImg(ctx,img,x,y,w,h){if(!img)return;const ia=img.width/img.height,ba=w/h;let dw,dh;if(ia>ba){dw=w;dh=w/ia;}else{dh=h;dw=h*ia;}ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh);}
+
+  function drawCollage(ctx,imgs,x,y,w,h){
+    const G=4;if(!imgs.length)return;
+    if(imgs.length===1)fitImg(ctx,imgs[0],x,y,w,h);
+    else if(imgs.length===2){const hw=Math.floor((w-G)/2);fitImg(ctx,imgs[0],x,y,hw,h);fitImg(ctx,imgs[1],x+hw+G,y,w-hw-G,h);}
+    else if(imgs.length===3){const lw=Math.floor(w*.57),rw=w-lw-G,hh=Math.floor((h-G)/2);fitImg(ctx,imgs[0],x,y,lw,h);fitImg(ctx,imgs[1],x+lw+G,y,rw,hh);fitImg(ctx,imgs[2],x+lw+G,y+hh+G,rw,h-hh-G);}
+    else{const hw=Math.floor((w-G)/2),hh=Math.floor((h-G)/2);fitImg(ctx,imgs[0],x,y,hw,hh);fitImg(ctx,imgs[1],x+hw+G,y,w-hw-G,hh);fitImg(ctx,imgs[2],x,y+hh+G,hw,h-hh-G);fitImg(ctx,imgs[3],x+hw+G,y+hh+G,w-hw-G,h-hh-G);}
+  }
+
+  function logoWhite(ctx,logo,x,y,w,h){ctx.save();ctx.filter='brightness(0) invert(1)';ctx.drawImage(logo,x,y,w,h);ctx.restore();}
+
+  function drawWatermark(ctx,logo,x,y,w,h,tpl){
+    const TILE=160,LH=TILE*.38,LW=LH*logo.width/logo.height,OPA=tpl==='clean'?.14:.22;
+    const tile=document.createElement('canvas');tile.width=TILE;tile.height=TILE;
+    const tc=tile.getContext('2d');tc.save();tc.translate(TILE/2,TILE/2);tc.rotate(-Math.PI/4);tc.globalAlpha=OPA;if(tpl!=='clean')tc.filter='brightness(0) invert(1)';tc.drawImage(logo,-LW/2,-LH/2,LW,LH);tc.restore();
+    ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();const pat=ctx.createPattern(tile,'repeat');ctx.fillStyle=pat;ctx.fillRect(x,y,w,h);ctx.restore();
+  }
+
+  // ── Geometría del lienzo vertical 9:16 (fondo Katana) ──────
+  const GEOM=(()=>{
+    const W=900,H=1600;          // 9:16, dimensiones pares (requerido por H.264)
+    const PX=50, PY=350, PW=606, PH=700;  // zona oscura para la foto
+    const cx=PX+PW/2;            // centro horizontal de la columna de foto
+    const textCx=W/2;            // texto centrado en todo el lienzo
+    const textTop=1120;          // texto en la zona oscura central-baja
+    return {W,H,PX,PY,PW,PH,cx,textCx,textTop};
+  })();
+
+  function drawBadge(ctx,text,x,y,fontPx){
+    if(!text)return;
+    const clr={'PROMO':'#D42020','OFERTA':'#D42020','NUEVO':'#1a7a3c','LIQUIDACIÓN':'#8a0e0e','ENVÍO GRATIS':'#7C3F0B','GARANTÍA':'#2c1a7a','PRECIO ESPECIAL':'#7a6a00'}[text]||'#D42020';
+    ctx.font=`800 ${fontPx}px 'Bebas Neue','Barlow Condensed',sans-serif`;
+    const tw=ctx.measureText(text).width, pad=fontPx*.5, bh=fontPx*1.34, tip=bh*.5;
+    // Sombra + forma de flecha
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,0.6)';ctx.shadowBlur=18;ctx.shadowOffsetY=6;
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+tw+pad*2,y);ctx.lineTo(x+tw+pad*2+tip,y+bh/2);ctx.lineTo(x+tw+pad*2,y+bh);ctx.lineTo(x,y+bh);ctx.closePath();
+    ctx.fillStyle=clr;ctx.fill();
+    ctx.restore();
+    // Borde superior brillante
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+tw+pad*2,y);ctx.lineTo(x+tw+pad*2+tip,y+bh/2);
+    ctx.strokeStyle='rgba(255,255,255,0.28)';ctx.lineWidth=3;ctx.stroke();
+    // Texto con glow
+    ctx.save();
+    ctx.shadowColor=clr;ctx.shadowBlur=24;
+    ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.textAlign='left';
+    ctx.fillText(text,x+pad,y+bh/2);
+    ctx.restore();
+  }
+
+  function drawNameText(ctx,name,cx,y,fontPx){
+    ctx.font=`800 ${fontPx}px 'Barlow Condensed',sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,0.9)';ctx.shadowBlur=16;
+    ctx.fillStyle='#fff';
+    ctx.fillText(name.toUpperCase().slice(0,32),cx,y);
+    ctx.restore();
+  }
+
+  function drawPriceText(ctx,price,cx,y,fontPx){
+    ctx.font=`800 ${fontPx}px 'Barlow Condensed',sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.save();
+    ctx.shadowColor='#D42020';ctx.shadowBlur=fontPx*.55;
+    ctx.lineWidth=fontPx*.1;ctx.strokeStyle='#000';ctx.strokeText(price,cx,y);
+    ctx.fillStyle='#fff';ctx.fillText(price,cx,y);
+    ctx.restore();
+  }
+
+  // skipText / skipBadge: para pre-renderizar la capa de fondo en la animación
+  async function buildCanvas(imgs,bgImg,{badge,name,price,skipText=false,skipBadge=false}){
+    await document.fonts.ready;
+    const {W,H,PX,PY,PW,PH,cx,textCx,textTop}=GEOM;
+    const cv=document.createElement('canvas');cv.width=W;cv.height=H;
+    const ctx=cv.getContext('2d');
+
+    // Fondo Katana (con logo, íconos y branding ya incluidos)
+    if(bgImg)ctx.drawImage(bgImg,0,0,W,H);
+
+    // Foto(s) del producto en la zona oscura
+    drawCollage(ctx,imgs,PX,PY,PW,PH);
+
+    // Texto: nombre + precio
+    if(!skipText&&(name||price)){
+      const nameFs=W*.07, priceFs=W*.146;
+      let y;
+      if(name){
+        y=textTop+nameFs*.6;
+        drawNameText(ctx,name,textCx,y,nameFs);
+        y+=nameFs*.75+priceFs*.55;
+      }else{
+        y=textTop+priceFs*.55;
+      }
+      if(price)drawPriceText(ctx,price,textCx,y,priceFs);
+    }
+
+    // Etiqueta (badge) arriba de la foto
+    if(!skipBadge&&badge)drawBadge(ctx,badge,PX+4,PY+8,W*.052);
+
+    return cv;
+  }
+
+  // ── Animación — texto llamativo, fondo estático ───────────
+  function renderAnimFrame(ctx,bgCv,t,opts){
+    const {badge,name,price}=opts;
+    const {W,H,PX,PY,cx,textCx,textTop}=GEOM;
+    const c01=v=>Math.max(0,Math.min(1,v));
+    const elasticOut=v=>{if(v<=0)return 0;if(v>=1)return 1;return Math.pow(2,-10*v)*Math.sin((v-.075)*(2*Math.PI)/.3)+1;};
+    const nameFs=W*.07, priceFs=W*.146;
+    const nameY=textTop+nameFs*.6;
+    const priceY=name?nameY+nameFs*.75+priceFs*.55:textTop+priceFs*.55;
+
+    ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.shadowColor='transparent';ctx.shadowOffsetY=0;
+    ctx.clearRect(0,0,W,H);
+    ctx.drawImage(bgCv,0,0);
+
+    // Línea roja barre verticalmente (0 → 0.5s)
+    const scanT=c01(t/.5);
+    if(scanT>0&&scanT<1){
+      const sy=scanT*H;
+      const gr=ctx.createLinearGradient(0,sy-55,0,sy+55);
+      gr.addColorStop(0,'rgba(212,32,32,0)');gr.addColorStop(.5,'rgba(212,32,32,.7)');gr.addColorStop(1,'rgba(212,32,32,0)');
+      ctx.fillStyle=gr;ctx.fillRect(0,sy-55,W,110);
+    }
+
+    // Badge entra desde la izquierda (t=0.45s)
+    if(badge){
+      const bt=elasticOut(c01((t-.45)/.45));
+      ctx.save();ctx.translate(-(1-bt)*W*.9,0);drawBadge(ctx,badge,PX+4,PY+8,W*.052);ctx.restore();
+    }
+
+    // Nombre cae desde arriba (t=0.9s)
+    if(name){
+      const raw=c01((t-.9)/.45);
+      ctx.save();ctx.globalAlpha=Math.min(1,raw*6);ctx.translate(0,-(1-elasticOut(raw))*H*.06);
+      drawNameText(ctx,name,textCx,nameY,nameFs);ctx.restore();
+    }
+
+    // Precio: parpadea → ESTAMPA → pulsa (t=1.4s)
+    if(price){
+      const BSTART=1.4,BDUR=.54,SLAMDT=.35,pt=t-BSTART;
+      if(pt>=0){
+        if(pt<BDUR){
+          if(Math.floor(pt/.18)%2===0){ctx.save();ctx.globalAlpha=.7;drawPriceText(ctx,price,textCx,priceY,priceFs);ctx.restore();}
+        }else{
+          const st=c01((pt-BDUR)/SLAMDT),after=pt-BDUR-SLAMDT,settled=st>=1;
+          const scale=settled?1+.05*Math.sin(after*Math.PI*2.5):1.6-.6*elasticOut(st);
+          ctx.save();ctx.translate(textCx,priceY);ctx.scale(scale,scale);ctx.translate(-textCx,-priceY);
+          drawPriceText(ctx,price,textCx,priceY,priceFs);ctx.restore();
+        }
+      }
+    }
+  }
+
+  // ── generateVideo — MP4 via WebCodecs (con fallback WebM) ──
+  async function generateVideo(imgs,bgImg,opts,onProgress,onDone){
+    const {W,H}=GEOM,DUR=10.0,FPS=30;
+
+    const bgCv=await buildCanvas(imgs,bgImg,{...opts,skipText:true,skipBadge:true});
+    const animCv=document.createElement('canvas');animCv.width=W;animCv.height=H;
+    const ctx=animCv.getContext('2d',{willReadFrequently:false});
+
+    // ── Intento 1: MediaRecorder con MP4 (iOS Safari) ──────
+    const mp4Mime=['video/mp4;codecs=avc1','video/mp4;codecs=h264','video/mp4'].find(t=>MediaRecorder.isTypeSupported(t));
+    if(mp4Mime){
+      const stream=animCv.captureStream(FPS),chunks=[];
+      const rec=new MediaRecorder(stream,{mimeType:mp4Mime,videoBitsPerSecond:8_000_000});
+      rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+      rec.onstop=()=>onDone(URL.createObjectURL(new Blob(chunks,{type:mp4Mime})),'mp4');
+      rec.start(100);
+      const t0=performance.now();
+      const loop=()=>{const t=(performance.now()-t0)/1000;if(t>=DUR){rec.stop();return;}renderAnimFrame(ctx,bgCv,t,opts);onProgress(t/DUR);requestAnimationFrame(loop);};
+      requestAnimationFrame(loop);
+      return;
+    }
+
+    // ── Intento 2: WebCodecs + mp4-muxer → MP4 (Chrome) ───
+    if(window.VideoEncoder&&window.Mp4Muxer){
+      try{
+        const{Muxer,ArrayBufferTarget}=window.Mp4Muxer;
+        const target=new ArrayBufferTarget();
+        const muxer=new Muxer({target,video:{codec:'avc',width:W,height:H},fastStart:'in-memory'});
+        let encErr=null;
+        const encoder=new VideoEncoder({output:(chunk,meta)=>muxer.addVideoChunk(chunk,meta),error:e=>{encErr=e;}});
+        encoder.configure({codec:'avc1.42001f',width:W,height:H,bitrate:6_000_000,framerate:FPS});
+        const FRAMES=Math.ceil(DUR*FPS);
+        for(let f=0;f<FRAMES;f++){
+          if(encErr)throw encErr;
+          renderAnimFrame(ctx,bgCv,f/FPS,opts);
+          const frame=new VideoFrame(animCv,{timestamp:Math.round(f*1_000_000/FPS),duration:Math.round(1_000_000/FPS)});
+          encoder.encode(frame,{keyFrame:f%FPS===0});frame.close();
+          if(f%10===0){onProgress(f/FRAMES);await new Promise(r=>setTimeout(r,0));}
+        }
+        await encoder.flush();muxer.finalize();
+        onDone(URL.createObjectURL(new Blob([target.buffer],{type:'video/mp4'})),'mp4');
+        return;
+      }catch(e){console.warn('WebCodecs falló:',e);}
+    }
+
+    // ── Fallback: MediaRecorder WebM ────────────────────────
+    if(!window.MediaRecorder){alert('Tu navegador no soporta generación de video.');return;}
+    const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(t=>MediaRecorder.isTypeSupported(t))||'video/webm';
+    const stream=animCv.captureStream(FPS),chunks=[];
+    const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:8_000_000});
+    rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+    rec.onstop=()=>onDone(URL.createObjectURL(new Blob(chunks,{type:mime})),'webm');
+    rec.start(100);
+    const t0=performance.now();
+    const loop=()=>{
+      const t=(performance.now()-t0)/1000;
+      if(t>=DUR){rec.stop();return;}
+      renderAnimFrame(ctx,bgCv,t,opts);
+      onProgress(t/DUR);
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
+
+  const BADGES=['PROMO','OFERTA','NUEVO','LIQUIDACIÓN','ENVÍO GRATIS','GARANTÍA','PRECIO ESPECIAL'];
+
+  // ── App ─────────────────────────────────────────────────────
+  function App(){
+    const [photos,setPhotos]=useState([]);
+    const [badge,setBadge]=useState('PROMO');
+    const [customBadge,setCustomBadge]=useState('');
+    const [name,setName]=useState('');
+    const [price,setPrice]=useState('');
+    const [result,setResult]=useState(null);
+    const [animResult,setAnimResult]=useState(null);
+    const [animExt,setAnimExt]=useState('mp4');
+    const [busy,setBusy]=useState(false);
+    const [loading,setLoading]=useState(false);
+    const [animating,setAnimating]=useState(false);
+    const [animProg,setAnimProg]=useState(0);
+    const [bgReady,setBgReady]=useState(false);
+    const bgRef=useRef(null),fileRef=useRef(null),timer=useRef(null);
+
+    const effectiveBadge=badge==='PERSONALIZADA'?(customBadge.trim().toUpperCase()||null):badge;
+
+    useEffect(()=>{const img=new Image();img.onload=()=>{bgRef.current=img;setBgReady(true);};img.src='assets/fondo-katana.png';},[]);
+    useEffect(()=>{
+      if(!photos.length)return;
+      clearTimeout(timer.current);timer.current=setTimeout(compose,200);
+      return()=>clearTimeout(timer.current);
+    },[photos,badge,customBadge,name,price,bgReady]);
+
+    async function compose(){
+      if(!photos.length||!bgRef.current){
+        setResult(prev=>{if(prev)URL.revokeObjectURL(prev);return null;});
+        return;
+      }
+      setBusy(true);
+      try{
+        const imgs=photos.map(p=>p.img);
+        const cv=await buildCanvas(imgs,bgRef.current,{badge:effectiveBadge,name,price});
+        cv.toBlob(blob=>{setResult(prev=>{if(prev)URL.revokeObjectURL(prev);return URL.createObjectURL(blob);});setBusy(false);},'image/jpeg',.93);
+      }catch(e){console.error(e);setBusy(false);}
+    }
+
+    async function loadFile(file){
+      if(!file||!file.type.startsWith('image/'))return;
+      const origUrl=URL.createObjectURL(file);setLoading(true);
+      try{const pi=await removeBackground(file);setPhotos(prev=>[...prev,{img:pi,url:origUrl,done:true}].slice(0,4));}
+      catch(e){const img=new Image();await new Promise(r=>{img.onload=r;img.src=origUrl;});setPhotos(prev=>[...prev,{img,url:origUrl,done:false}].slice(0,4));}
+      finally{setLoading(false);}
+    }
+
+    function removePhoto(i){setPhotos(prev=>{URL.revokeObjectURL(prev[i].url);return prev.filter((_,j)=>j!==i);});}
+    function handlePrice(raw){const bare=raw.replace(/^\$+/,'');setPrice(bare?'$'+bare:'');}
+
+    function handleGenerateAnimation(){
+      if(!photos.length||!bgRef.current)return;
+      setAnimResult(prev=>{if(prev)URL.revokeObjectURL(prev);return null;});
+      setAnimating(true);setAnimProg(0);
+      const imgs=photos.map(p=>p.img);
+      generateVideo(imgs,bgRef.current,{badge:effectiveBadge,name,price},
+        p=>setAnimProg(p),
+        (url,ext)=>{setAnimResult(url);setAnimExt(ext||'mp4');setAnimating(false);}
+      ).catch(e=>{console.error(e);setAnimating(false);});
+    }
+
+
+
+    return(
+      <div>
+        <header className="hdr">
+          <img src="assets/logo.png" alt="Katana Turbos"/>
+          <div className="hdr-badge">Generador de Imágenes</div>
+        </header>
+
+        {/* 01 Fotos */}
+        <div className="sec">
+          <div className="sec-lbl">01 — Fotos <span style={{color:'#3a3a3a',fontWeight:400}}>· hasta 4 ángulos</span></div>
+          {loading&&photos.length===0&&(<div className="upzone proc"><div className="spin" style={{margin:'0 auto 14px'}}></div><div className="up-title">Procesando...</div><div className="up-sub">Eliminando fondo automáticamente</div></div>)}
+          {!loading&&photos.length===0&&(
+            <div className="upzone" onClick={()=>fileRef.current?.click()} onDragOver={e=>{e.preventDefault();e.currentTarget.classList.add('drag');}} onDragLeave={e=>e.currentTarget.classList.remove('drag')} onDrop={e=>{e.preventDefault();e.currentTarget.classList.remove('drag');loadFile(e.dataTransfer.files[0]);}}>
+              <div className="up-ico"><svg width="26" height="26" viewBox="0 0 26 26" fill="none"><path d="M13 3v14M13 3L8 8M13 3l5 5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 19v2a2 2 0 002 2h16a2 2 0 002-2v-2" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg></div>
+              <div className="up-title">Toca para subir foto</div>
+              <div className="up-sub">JPG o PNG · fondo se elimina automático</div>
+            </div>
+          )}
+          {photos.length>0&&(
+            <div className="photo-grid">
+              {photos.map((p,i)=>(
+                <div key={i} className="ph-thumb">
+                  <img src={p.url} alt={`Ángulo ${i+1}`}/>
+                  <button className="rm-btn" onClick={()=>removePhoto(i)}>×</button>
+                  <div className="ph-num">{i+1}</div>
+                  {p.done&&<div className="ph-ok">✓</div>}
+                </div>
+              ))}
+              {photos.length<4&&(
+                <div className={`add-more${loading?' loading':''}`} onClick={()=>!loading&&fileRef.current?.click()}>
+                  {loading?<div className="spin sm"></div>:<><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4v14M4 11h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg><span>Agregar<br/>ángulo</span></>}
+                </div>
+              )}
+            </div>
+          )}
+          <input ref={fileRef} type="file" accept="image/*" onChange={e=>{loadFile(e.target.files[0]);e.target.value='';}}/>
+        </div>
+
+        {/* 02 Etiqueta */}
+        <div className="sec">
+          <div className="sec-lbl">02 — Etiqueta</div>
+          <div className="badge-row">
+            <div className={`chip none${!badge?' on':''}`} onClick={()=>setBadge(null)}>Sin etiqueta</div>
+            {BADGES.map(b=>(<div key={b} className={`chip${badge===b?' on':''}`} onClick={()=>setBadge(b)}>{b}</div>))}
+            <div className={`chip custom${badge==='PERSONALIZADA'?' on':''}`} onClick={()=>setBadge('PERSONALIZADA')}>✏ Personalizada</div>
+          </div>
+          {badge==='PERSONALIZADA'&&(
+            <div className="custom-wrap">
+              <input className="inp" type="text" placeholder="Ej: SOLO HOY · 2X1" maxLength={22}
+                value={customBadge} onChange={e=>setCustomBadge(e.target.value.toUpperCase())}/>
+            </div>
+          )}
+        </div>
+
+        {/* 03 Texto */}
+        <div className="sec">
+          <div className="sec-lbl">03 — Texto (opcional)</div>
+          <div className="fld-wrap">
+            <div className="fld-lbl">Nombre del producto</div>
+            <input className="inp" type="text" placeholder="Ej: Turbo GT2560 VNT" value={name} onChange={e=>setName(e.target.value)}/>
+          </div>
+          <div className="fld-wrap">
+            <div className="fld-lbl">Precio</div>
+            <input className="inp" type="text" placeholder="$0" value={price} onChange={e=>handlePrice(e.target.value)}/>
+          </div>
+        </div>
+
+
+
+        {/* Vista previa */}
+        <div className="sec" style={{borderBottom:'none'}}>
+          <div className="sec-lbl">Vista previa</div>
+          <div className="pv-wrap">
+            {result&&<img src={result} alt="Preview"/>}
+            {!result&&(<div className="pv-empty"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" opacity=".15"><rect x="4" y="4" width="44" height="44" rx="5" stroke="white" strokeWidth="2" strokeDasharray="7 5"/><path d="M4 38L16 26L23 33L32 21L48 40" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg><span>Sube una foto para comenzar</span></div>)}
+            {busy&&<div className="spin-ov"><div className="spin"></div></div>}
+          </div>
+        </div>
+
+        {/* Botones */}
+        <div className="act-wrap">
+          <a className={`btn-dl${!result?' off':''}`} href={result||'#'} download="katana-turbos-promo.jpg">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 3v11M10 14L7 11M10 14l3-3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 17h14" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>
+            Descargar imagen
+          </a>
+
+          <div className="act-divider"></div>
+          <button className={`btn-anim${(!result||animating)?' off':''}`} onClick={handleGenerateAnimation}>
+            {animating
+              ? <><div className="spin sm"></div>&nbsp;Generando... {Math.round(animProg*100)}%</>
+              : <>▶&nbsp;&nbsp;Generar Animación</>
+            }
+          </button>
+          {animResult&&(
+            <a className="btn-animdl" href={animResult} download={`katana-turbos-estado.${animExt}`}>
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 3v11M10 14L7 11M10 14l3-3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 17h14" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>
+              Descargar Animación (.{animExt})
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
