@@ -250,6 +250,24 @@
     return {W,H,PX,PY,PW,PH,cx,textCx,textTop};
   })();
 
+  function drawShippingBanner(ctx,PX,PY,PW,PH,fontPx){
+    const bh=fontPx*1.45, y=PY+PH-bh;
+    ctx.save();
+    // Fondo semitransparente rojo oscuro
+    ctx.fillStyle='rgba(140,10,10,0.92)';
+    ctx.fillRect(PX,y,PW,bh);
+    // Línea superior brillante
+    ctx.strokeStyle='rgba(255,80,80,0.5)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(PX,y);ctx.lineTo(PX+PW,y);ctx.stroke();
+    // Ícono + texto centrado
+    ctx.font=`800 ${fontPx}px 'Bebas Neue','Barlow Condensed',sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.shadowColor='rgba(0,0,0,0.7)';ctx.shadowBlur=10;
+    ctx.fillStyle='#fff';
+    ctx.fillText('⚡ ENVÍO INMEDIATO',PX+PW/2,y+bh/2);
+    ctx.restore();
+  }
+
   function drawBadge(ctx,text,x,y,fontPx){
     if(!text)return;
     const clr={'PROMO':'#D42020','OFERTA':'#D42020','NUEVO':'#1a7a3c','LIQUIDACIÓN':'#8a0e0e','ENVÍO GRATIS':'#7C3F0B','GARANTÍA':'#2c1a7a','PRECIO ESPECIAL':'#7a6a00'}[text]||'#D42020';
@@ -293,7 +311,7 @@
   }
 
   // skipText / skipBadge: para pre-renderizar la capa de fondo en la animación
-  async function buildCanvas(imgs,bgImg,{badge,name,price,skipText=false,skipBadge=false}){
+  async function buildCanvas(imgs,bgImg,{badge,name,price,showShipping=false,skipText=false,skipBadge=false}){
     await document.fonts.ready;
     const {W,H,PX,PY,PW,PH,cx,textCx,textTop}=GEOM;
     const cv=document.createElement('canvas');cv.width=W;cv.height=H;
@@ -319,16 +337,21 @@
       if(price)drawPriceText(ctx,price,textCx,y,priceFs);
     }
 
-    // Etiqueta (badge) arriba de la foto
-    if(!skipBadge&&badge)drawBadge(ctx,badge,PX+4,PY+8,W*.052);
+    // Etiqueta (badge) encima de la zona de foto
+    const badgeFontPx=W*.052;
+    const badgeBh=badgeFontPx*1.34;
+    if(!skipBadge&&badge)drawBadge(ctx,badge,PX+4,PY-badgeBh-10,badgeFontPx);
+
+    // Banner inferior "Envío Inmediato"
+    if(!skipBadge&&showShipping)drawShippingBanner(ctx,PX,PY,PW,PH,W*.05);
 
     return cv;
   }
 
   // ── Animación — texto llamativo, fondo estático ───────────
   function renderAnimFrame(ctx,bgCv,t,opts){
-    const {badge,name,price}=opts;
-    const {W,H,PX,PY,cx,textCx,textTop}=GEOM;
+    const {badge,name,price,showShipping}=opts;
+    const {W,H,PX,PY,PW,PH,cx,textCx,textTop}=GEOM;
     const c01=v=>Math.max(0,Math.min(1,v));
     const elasticOut=v=>{if(v<=0)return 0;if(v>=1)return 1;return Math.pow(2,-10*v)*Math.sin((v-.075)*(2*Math.PI)/.3)+1;};
     const nameFs=W*.07, priceFs=W*.146;
@@ -349,9 +372,16 @@
     }
 
     // Badge entra desde la izquierda (t=0.45s)
+    const badgeFontPx=W*.052, badgeBh=badgeFontPx*1.34;
     if(badge){
       const bt=elasticOut(c01((t-.45)/.45));
-      ctx.save();ctx.translate(-(1-bt)*W*.9,0);drawBadge(ctx,badge,PX+4,PY+8,W*.052);ctx.restore();
+      ctx.save();ctx.translate(-(1-bt)*W*.9,0);drawBadge(ctx,badge,PX+4,PY-badgeBh-10,badgeFontPx);ctx.restore();
+    }
+
+    // Banner envío entra desde abajo (t=0.65s)
+    if(showShipping){
+      const st=elasticOut(c01((t-.65)/.4));
+      ctx.save();ctx.translate(0,(1-st)*120);drawShippingBanner(ctx,PX,PY,PW,PH,W*.05);ctx.restore();
     }
 
     // Nombre cae desde arriba (t=0.9s)
@@ -457,6 +487,7 @@
     const [loading,setLoading]=useState(false);
     const [animating,setAnimating]=useState(false);
     const [animProg,setAnimProg]=useState(0);
+    const [showShipping,setShowShipping]=useState(false);
     const [bgReady,setBgReady]=useState(false);
     const bgRef=useRef(null),fileRef=useRef(null),timer=useRef(null);
 
@@ -467,7 +498,7 @@
       if(!photos.length)return;
       clearTimeout(timer.current);timer.current=setTimeout(compose,200);
       return()=>clearTimeout(timer.current);
-    },[photos,badge,customBadge,name,price,bgReady]);
+    },[photos,badge,customBadge,name,price,showShipping,bgReady]);
 
     async function compose(){
       if(!photos.length||!bgRef.current){
@@ -477,7 +508,7 @@
       setBusy(true);
       try{
         const imgs=photos.map(p=>p.img);
-        const cv=await buildCanvas(imgs,bgRef.current,{badge:effectiveBadge,name,price});
+        const cv=await buildCanvas(imgs,bgRef.current,{badge:effectiveBadge,name,price,showShipping});
         cv.toBlob(blob=>{setResult(prev=>{if(prev)URL.revokeObjectURL(prev);return URL.createObjectURL(blob);});setBusy(false);},'image/jpeg',.93);
       }catch(e){console.error(e);setBusy(false);}
     }
@@ -498,7 +529,7 @@
       setAnimResult(prev=>{if(prev)URL.revokeObjectURL(prev);return null;});
       setAnimating(true);setAnimProg(0);
       const imgs=photos.map(p=>p.img);
-      generateVideo(imgs,bgRef.current,{badge:effectiveBadge,name,price},
+      generateVideo(imgs,bgRef.current,{badge:effectiveBadge,name,price,showShipping},
         p=>setAnimProg(p),
         (url,ext)=>{setAnimResult(url);setAnimExt(ext||'mp4');setAnimating(false);}
       ).catch(e=>{console.error(e);setAnimating(false);});
@@ -558,6 +589,14 @@
                 value={customBadge} onChange={e=>setCustomBadge(e.target.value.toUpperCase())}/>
             </div>
           )}
+        </div>
+
+        {/* 02b Envío Inmediato */}
+        <div className="sec">
+          <div className="sec-lbl">Banner inferior</div>
+          <div className={`chip${showShipping?' on':''}`} onClick={()=>setShowShipping(v=>!v)}>
+            ⚡ Envío Inmediato
+          </div>
         </div>
 
         {/* 03 Texto */}
