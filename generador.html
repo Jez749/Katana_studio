@@ -259,15 +259,15 @@
     return {W,H,PX,PY,PW,PH,cx,textCx,textTop};
   })();
 
-  function drawShippingBanner(ctx,PX,PY,PW,PH,fontPx){
+  function drawShippingBanner(ctx,W,H,fontPx){
     const text='🚚 ENVÍO INMEDIATO';
     ctx.save();
     ctx.font=`800 ${fontPx}px 'Bebas Neue','Barlow Condensed',sans-serif`;
     const tw=ctx.measureText(text).width;
-    const padX=fontPx*.6, padY=fontPx*.4, rad=fontPx*.22, margin=fontPx*.5;
+    const padX=fontPx*.6, padY=fontPx*.4, rad=fontPx*.22, margin=W*.05;
     const bw=tw+padX*2, bh=fontPx+padY*2;
-    // Insignia anclada en la esquina INFERIOR IZQUIERDA de la zona de foto
-    const x=PX+margin, y=PY+PH-bh-margin;
+    // Insignia anclada en la esquina INFERIOR IZQUIERDA de la plantilla completa
+    const x=margin, y=H-bh-margin;
     const rrect=(rx,ry,rw,rh)=>{
       if(ctx.roundRect){ctx.beginPath();ctx.roundRect(rx,ry,rw,rh,rad);}
       else{ctx.beginPath();ctx.rect(rx,ry,rw,rh);}
@@ -361,7 +361,7 @@
     if(!skipBadge&&badge)drawBadge(ctx,badge,PX+4,PY-badgeBh-10,badgeFontPx);
 
     // Banner inferior "Envío Inmediato"
-    if(!skipBadge&&showShipping)drawShippingBanner(ctx,PX,PY,PW,PH,W*.05);
+    if(!skipBadge&&showShipping)drawShippingBanner(ctx,W,H,W*.05);
 
     return cv;
   }
@@ -399,7 +399,7 @@
     // Banner envío entra desde abajo (t=0.65s)
     if(showShipping){
       const st=elasticOut(c01((t-.65)/.4));
-      ctx.save();ctx.translate(0,(1-st)*120);drawShippingBanner(ctx,PX,PY,PW,PH,W*.05);ctx.restore();
+      ctx.save();ctx.translate(0,(1-st)*120);drawShippingBanner(ctx,W,H,W*.05);ctx.restore();
     }
 
     // Nombre cae desde arriba (t=0.9s)
