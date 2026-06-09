@@ -80,7 +80,7 @@
 <script type="text/babel">
   const { useState, useEffect, useRef } = React;
 
-  // ── Background removal (3 pasadas) ────────────────────────
+  // ── Background removal (conectividad + color, conserva partes claras) ──
   function removeBackground(file){
     return new Promise((resolve,reject)=>{
       const img=new Image(),url=URL.createObjectURL(file);
@@ -107,8 +107,16 @@
 
           const cdist=(x,y)=>{const i=(y*W+x)*4;const dr=d[i]-bg[0],dg=d[i+1]-bg[1],db=d[i+2]-bg[2];return Math.sqrt(dr*dr+dg*dg+db*db);};
 
-          // ── PASADA 1: BFS flood-fill desde bordes ──
-          const thr = isWhiteBg ? 72 : lum<40 ? 38 : 55;
+          // Saturación del píxel (qué tan "de color" es; 0 = gris/blanco/negro)
+          const sat=(x,y)=>{const i=(y*W+x)*4;return Math.max(d[i],d[i+1],d[i+2])-Math.min(d[i],d[i+1],d[i+2]);};
+          // Ruido del fondo (qué tan uniforme es). Fondo plano → umbral más fino.
+          const madOf=(arr,md)=>{const dv=arr.map(v=>Math.abs(v-md)).sort((a,b)=>a-b);return dv[Math.floor(dv.length/2)]||0;};
+          const bgNoise=(madOf(rs,bg[0])+madOf(gs,bg[1])+madOf(bs,bg[2]))/3;
+
+          // ── PASADA 1: BFS flood-fill desde los bordes (solo fondo CONECTADO) ──
+          // Solo elimina fondo que toca el borde de la imagen; ninguna parte
+          // interior del producto (aunque sea blanca) se borra en esta pasada.
+          const thr = isWhiteBg ? Math.min(70,Math.max(46,52+bgNoise*2)) : lum<40 ? 38 : 55;
           const mask=new Uint8Array(W*H);
           const sx=new Int32Array(W*H),sy=new Int32Array(W*H);
           let sp=0,head=0;
@@ -117,80 +125,81 @@
           for(let y=1;y<H-1;y++){push(0,y);push(W-1,y);}
           while(head<sp){const cx=sx[head],cy=sy[head];head++;push(cx-1,cy);push(cx+1,cy);push(cx,cy-1);push(cx,cy+1);}
 
-          // ── PASADA 2: Para fondos blancos — luminance keying agresivo ──
-          // Cualquier píxel casi-blanco adyacente (radio 3) a uno ya transparente → eliminar
+          // ── PASADA 2: limpiar el halo del borde del producto ──
+          // Crece SOLO desde píxeles ya transparentes y SOLO si el color se
+          // parece de verdad al fondo. Un brillo blanco del producto pegado al
+          // borde NO se elimina porque su color/saturación no coincide del todo.
           if(isWhiteBg){
-            let changed=true;
-            let pass=0;
-            while(changed&&pass<6){
+            const haloThr=thr*0.8;
+            let changed=true,pass=0;
+            while(changed&&pass<4){
               changed=false;pass++;
               for(let y=1;y<H-1;y++){for(let x=1;x<W-1;x++){
                 const i=y*W+x;if(mask[i])continue;
-                // Vecino transparente?
-                const nearBg=mask[i-1]||mask[i+1]||mask[i-W]||mask[i+W]||
-                             (x>1&&mask[i-2])||(x<W-2&&mask[i+2])||
-                             (y>1&&mask[i-W-W])||(y<H-2&&mask[i+W+W]);
-                if(!nearBg)continue;
-                const pi=i*4;
-                const r=d[pi],g=d[pi+1],b=d[pi+2];
-                const brightness=(r+g+b)/3;
-                const saturation=Math.max(r,g,b)-Math.min(r,g,b);
-                // Pixel casi-blanco o muy parecido al fondo → eliminar
-                if(brightness>200&&saturation<40){mask[i]=1;changed=true;}
-                else if(cdist(x,y)<thr*0.7){mask[i]=1;changed=true;}
+                if(!(mask[i-1]||mask[i+1]||mask[i-W]||mask[i+W]))continue;
+                if(cdist(x,y)<haloThr&&sat(x,y)<26){mask[i]=1;changed=true;}
               }}
             }
           }
 
-          // ── PASADA 2.5: Eliminar blanco AISLADO (huecos internos) ──
-          // El flood-fill solo borra fondo conectado al borde. Los huecos
-          // blancos rodeados por el producto quedan; aquí los detectamos
-          // con un keying global de blanco casi-puro.
+          // ── PASADA 2.5: huecos internos (fondo visible a través del producto) ──
+          // En vez de borrar TODO lo casi-blanco (lo que comía partes claras del
+          // producto), detectamos regiones blancas CERRADAS y solo las quitamos
+          // si son PLANAS y casi idénticas al color del fondo. Un brillo metálico
+          // tiene degradado (varianza alta) y un tono claro de la pieza casi nunca
+          // es exactamente el color del fondo → ambos se conservan.
           if(isWhiteBg){
-            for(let i=0;i<W*H;i++){
-              if(mask[i])continue;
-              const pi=i*4;
-              const r=d[pi],g=d[pi+1],b=d[pi+2];
-              const brightness=(r+g+b)/3;
-              const saturation=Math.max(r,g,b)-Math.min(r,g,b);
-              // Blanco casi-puro y sin color → es fondo aislado
-              if(brightness>225&&saturation<24){mask[i]=1;}
-            }
-            // Expandir 2px alrededor de los huecos recién marcados para
-            // limpiar el halo gris-claro del borde del hueco
-            for(let rep=0;rep<2;rep++){
-              const add=[];
-              for(let y=1;y<H-1;y++){for(let x=1;x<W-1;x++){
-                const i=y*W+x;if(mask[i])continue;
-                const nearBg=mask[i-1]||mask[i+1]||mask[i-W]||mask[i+W];
-                if(!nearBg)continue;
-                const pi=i*4,brightness=(d[pi]+d[pi+1]+d[pi+2])/3,saturation=Math.max(d[pi],d[pi+1],d[pi+2])-Math.min(d[pi],d[pi+1],d[pi+2]);
-                if(brightness>205&&saturation<34)add.push(i);
-              }}
-              for(const i of add)mask[i]=1;
-            }
+            const holeColorThr=Math.max(26,thr*0.55); // muy parecido al fondo
+            const seen=new Uint8Array(W*H);
+            const qx=new Int32Array(W*H),qy=new Int32Array(W*H);
+            const cand=i=>{ // candidato a hueco: aún opaco, poco saturado y casi-fondo
+              if(mask[i]||seen[i])return false;
+              const pi=i*4,r=d[pi],g=d[pi+1],b=d[pi+2];
+              if(Math.max(r,g,b)-Math.min(r,g,b)>22)return false;
+              const dr=r-bg[0],dg=g-bg[1],db=b-bg[2];
+              return Math.sqrt(dr*dr+dg*dg+db*db)<holeColorThr;
+            };
+            for(let y0=1;y0<H-1;y0++){for(let x0=1;x0<W-1;x0++){
+              const start=y0*W+x0;
+              if(!cand(start))continue;
+              // BFS sobre la región candidata (sus píxeles quedan en qx/qy[0..qs))
+              let qs=1,qh=0,touchBorder=false,sumL=0,sumL2=0;
+              seen[start]=1;qx[0]=x0;qy[0]=y0;
+              while(qh<qs){
+                const cx=qx[qh],cy=qy[qh];qh++;
+                const pi=(cy*W+cx)*4,L=(d[pi]+d[pi+1]+d[pi+2])/3;sumL+=L;sumL2+=L*L;
+                if(cx===0||cy===0||cx===W-1||cy===H-1)touchBorder=true;
+                let ni;
+                if(cx>0){ni=cy*W+cx-1;if(cand(ni)){seen[ni]=1;qx[qs]=cx-1;qy[qs]=cy;qs++;}}
+                if(cx<W-1){ni=cy*W+cx+1;if(cand(ni)){seen[ni]=1;qx[qs]=cx+1;qy[qs]=cy;qs++;}}
+                if(cy>0){ni=(cy-1)*W+cx;if(cand(ni)){seen[ni]=1;qx[qs]=cx;qy[qs]=cy-1;qs++;}}
+                if(cy<H-1){ni=(cy+1)*W+cx;if(cand(ni)){seen[ni]=1;qx[qs]=cx;qy[qs]=cy+1;qs++;}}
+              }
+              // Solo se elimina si NO toca el borde (es interno/cerrado) y es PLANA
+              const mean=sumL/qs, variance=sumL2/qs-mean*mean;
+              if(!touchBorder&&variance<70){
+                for(let k=0;k<qs;k++)mask[qy[k]*W+qx[k]]=1;
+              }
+            }}
           }
 
-          // ── PASADA 3: Aplicar alpha con feather suave (radio 3) + spill ──
-          // Precalcular mapa de distancia al borde (simplificado)
+          // ── PASADA 3: aplicar alpha con feather suave (radio 2) protegido ──
+          // El feather solo atenúa píxeles que se parecen al fondo; un borde
+          // claro del producto conserva su opacidad (evita "comerse" el filo).
           for(let y=0;y<H;y++){for(let x=0;x<W;x++){
             const i=y*W+x;
             if(mask[i]){d[i*4+3]=0;continue;}
-            // Contar vecinos transparentes en radio 3
             let near=0,total=0;
-            for(let dy=-3;dy<=3;dy++){for(let dx=-3;dx<=3;dx++){
+            for(let dy=-2;dy<=2;dy++){for(let dx=-2;dx<=2;dx++){
               const nx=x+dx,ny=y+dy;
               if(nx<0||nx>=W||ny<0||ny>=H)continue;
               total++;if(mask[ny*W+nx])near++;
             }}
             if(near===0)continue;
-            const pi=i*4;
             const frac=near/total;
-            // Spill suppression: píxeles claros cerca del borde pierden alpha
-            const brightness=(d[pi]+d[pi+1]+d[pi+2])/3;
-            const spillR=isWhiteBg?Math.max(0,(brightness-150)/105):0;
-            const newAlpha=d[pi+3]*(1-frac*0.85)*(1-spillR*0.9);
-            d[pi+3]=Math.max(0,Math.round(newAlpha));
+            const bgLike=Math.max(0,1-cdist(x,y)/(thr*1.5)); // 1=igual al fondo, 0=distinto
+            const atten=frac*0.75*bgLike;
+            d[i*4+3]=Math.max(0,Math.round(d[i*4+3]*(1-atten)));
           }}
 
           ctx.putImageData(imd,0,0);
